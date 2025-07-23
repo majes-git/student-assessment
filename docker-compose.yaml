@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    #networks:
+    #  nginx:
+    #    aliases:
+    #      - student-assessment.example.com
+    environment:
+      - GOOGLE_SPREADSHEET="Student Assessment"
+    volumes:
+      - ./credentials.json:/app/credentials.json
+      - ./flask_secret.key:/app/flask_secret.key
+
+  # the web application needs a reverse-proxy (nginx, traefik, ...)
+  # for secure transport (https) and authentication (user/password)
+  #reverse-proxy:
+  #  image: traefik
+  #  ...
+
+#networks:
+#  nginx:
+#    external: true
+
