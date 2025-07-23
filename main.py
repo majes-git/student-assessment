@@ -142,4 +142,4 @@ if __name__ == '__main__':
     env = Environment(loader=FunctionLoader(load_template), cache_size=0)
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.secret_key = load_secret_key()
-    app.run(debug=False, use_reloader=False)
+    app.run(debug=False, use_reloader=False, host='0.0.0.0', port=8000)
