@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Person auswählen</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Person auswählen</h4>
+                    <form method="POST" id="personForm">
+                        <div class="mb-3">
+                            <label class="form-label">Tabelle wählen</label>
+                            <select name="sheet" class="form-select" id="sheetSelect" onchange="populateStudents()" required>
+                                <option value="">-- Bitte Tabelle auswählen --</option>
+                                {% for title in sheet_titles %}
+                                    <option value="{{ title }}" {% if title == selected_sheet_title %}selected{% endif %}>{{ title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Person</label>
+                            <select name="id" class="form-select" id="idSelect" required {% if not selected_sheet_title %}disabled{% endif %}>
+                                <option value="">-- Bitte zuerst Tabelle wählen --</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Wortanzahl</label>
+                            <input type="text" name="word_count" class="form-control" value="{{ word_count or '' }}">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Anzeigen</button>
+                    </form>
+
+                    {% if result %}
+                        <div class="mt-4 position-relative">
+                            <label class="form-label d-flex justify-content-between">
+                                <span>KI-Anfrage</span>
+                                <a href="#" onclick="copyText(); return false;" class="text-decoration-none small text-primary">Kopieren</a>
+                            </label>
+                            <textarea id="resultText" class="form-control" rows="8" readonly style="white-space: pre-wrap;">{{ result }}</textarea>
+                        </div>
+                        <div class="mt-5">
+                            <h5>KI-Rücktransformation</h5>
+
+                            <div class="mb-3">
+                                <label for="textInput" class="form-label">Eingabetext</label>
+                                <textarea id="textInput" class="form-control" rows="4" placeholder="Hier Text von KI eingeben..."></textarea>
+                            </div>
+
+                            <div class="mb-3 position-relative">
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>Ergebnis</span>
+                                    <a href="#" onclick="transformAndCopy(); return false;" class="text-decoration-none small text-primary">Transformieren &amp; Kopieren</a>
+                                </label>
+                                <textarea id="textTransformed" class="form-control" rows="4" readonly></textarea>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+const SELECTED_PERSON_ID = "{{ selected_id | default('') }}";
+
+function copyText() {
+    const copyInput = document.getElementById("resultText");
+    copyInput.select();
+    copyInput.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyInput.value);
+}
+
+function populateStudents() {
+    const sheet = document.getElementById("sheetSelect").value;
+    const idSelect = document.getElementById("idSelect");
+
+    if (!sheet) {
+        idSelect.innerHTML = '<option>-- Bitte zuerst Tabelle wählen --</option>';
+        idSelect.disabled = true;
+        return;
+    }
+    fetch("/get_entries", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheet: sheet })
+    })
+    .then(response => response.json())
+    .then(data => {
+        idSelect.innerHTML = '<option value="">-- Bitte Schüler(in) auswählen --</option>';
+        data.entries.forEach(entry => {
+            const option = document.createElement("option");
+            option.value = entry.id;
+            option.textContent = entry.label;
+            if (entry.id === SELECTED_PERSON_ID) {
+                option.selected = true;
+            }
+            idSelect.appendChild(option);
+        });
+        idSelect.disabled = false;
+    });
+}
+
+// Auto-load student options on sheet change
+document.getElementById("sheetSelect").addEventListener("change", populateStudents());
+
+function transformAndCopy() {
+    let input = document.getElementById("textInput").value;
+
+    // Replace placeholders with original names (injected from backend)
+    const nameMap = {{ name_map|tojson }};
+    for (const [placeholder, realname] of Object.entries(nameMap)) {
+        input = input.replace(new RegExp(placeholder, 'g'), realname);
+    }
+
+    const output = document.getElementById("textTransformed");
+    output.value = input.trim();
+    output.select();
+    output.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(output.value);
+}
+</script>
+
+</body>
+</html>
